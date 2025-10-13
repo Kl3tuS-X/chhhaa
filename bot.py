@@ -1,5 +1,5 @@
 # Файл: bot.py
-# ВЕРСИЯ "ПОБЕДА" - ИДЕАЛЬНА ДЛЯ RAILWAY
+# ВЕРСИЯ "FLY.IO READY" - ГОТОВ К ПОЛЕТУ
 
 import logging
 import os
@@ -10,15 +10,16 @@ from aiogram import Bot, Dispatcher, types
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-logger.info("--- [RAILWAY] Запуск приложения ---")
+logger.info("--- [FLY.IO] Запуск приложения ---")
 
 # --- Переменные окружения ---
 TOKEN = os.getenv("BOT_TOKEN")
-WEB_APP_URL_FROM_ENV = os.getenv("RAILWAY_STATIC_URL") # Railway предоставляет эту переменную автоматически
-WEBHOOK_PATH = f"/webhook/{TOKEN}"
-# Railway использует https, поэтому добавляем его
-WEBHOOK_URL = f"https://{WEB_APP_URL_FROM_ENV}{WEBHOOK_PATH}"
+# Fly.io автоматически создает переменную FLY_APP_NAME, из которой мы можем составить URL
+FLY_APP_NAME = os.getenv("FLY_APP_NAME")
+WEB_APP_URL_FROM_ENV = f"{FLY_APP_NAME}.fly.dev"
 
+WEBHOOK_PATH = f"/webhook/{TOKEN}"
+WEBHOOK_URL = f"https://{WEB_APP_URL_FROM_ENV}{WEBHOOK_PATH}"
 
 # --- Инициализация ---
 app = FastAPI()
@@ -32,13 +33,11 @@ dp.include_router(user_commands.router)
 app.include_router(api_router)
 logger.info("--- Роутеры подключены ---")
 
-
 # --- Статические файлы ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_PATH = os.path.join(BASE_DIR, "static")
 from fastapi.staticfiles import StaticFiles
 app.mount("/", StaticFiles(directory=STATIC_PATH, html=True), name="static")
-
 
 # --- Логика Webhook ---
 @app.post(WEBHOOK_PATH)
