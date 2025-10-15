@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>AI Nexus</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="modal-overlay" id="model-selection-modal">
+        <div class="modal-content">
+            <h3>Выберите модель ИИ</h3>
+            <p>Для каждого нового диалога можно выбрать свою версию Gemini.</p>
+            <div class="model-choices">
+                <div class="model-card" data-model="gemini-2.5-flash">
+                    <div class="model-icon">⚡️</div>
+                    <h4>Gemini 2.5 Flash</h4>
+                    <p>Самая быстрая модель, идеальна для повседневных задач.</p>
+                </div>
+                <div class="model-card" data-model="gemini-2.5-pro">
+                    <div class="model-icon">🧠</div>
+                    <h4>Gemini 2.5 Pro</h4>
+                    <p>Более мощная и креативная модель для сложных запросов.</p>
+                </div>
+            </div>
+            <button id="modal-close-btn">Отмена</button>
+        </div>
+    </div>
+
+    <div class="app-wrapper">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-title">Ваши диалоги</span>
+                <button class="new-chat-btn" id="new-chat-button">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 4V20M4 12H20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                    <span>Новый диалог</span>
+                </button>
+            </div>
+            <div class="chat-list" id="chat-list"></div>
+        </aside>
+        <main class="main-content">
+            <header class="chat-header">
+                <button class="menu-btn" id="menu-button"><div class="line line1"></div><div class="line line2"></div><div class="line line3"></div></button>
+                <div class="chat-title" id="chat-title"></div>
+                <button class="theme-switcher" id="theme-switcher" title="Сменить тему">
+                    <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.106a.75.75 0 010 1.06l-1.591 1.592a.75.75 0 01-1.06-1.061l1.591-1.591a.75.75 0 011.06 0zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5h2.25a.75.75 0 01.75.75zM17.803 17.803a.75.75 0 01-1.06 0l-1.591-1.591a.75.75 0 111.06-1.06l1.591 1.591a.75.75 0 010 1.06zM12 18.75a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0v-2.25a.75.75 0 01.75-.75zM5.197 17.803a.75.75 0 010-1.06l1.591-1.591a.75.75 0 011.06 1.06l-1.591 1.591a.75.75 0 01-1.06 0zM3 12a.75.75 0 01.75-.75h2.25a.75.75 0 010 1.5H3.75A.75.75 0 013 12zM6.106 5.197a.75.75 0 011.06 0l1.591 1.591a.75.75 0 01-1.06 1.06L6.106 6.257a.75.75 0 010-1.06z"></path></svg>
+                    <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path fill-rule="evenodd" d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 004.463-.948.75.75 0 11.411 1.482A10.473 10.473 0 0118 16.5a10.5 10.5 0 01-10.5-10.5c0-1.423.29-2.797.81-4.042a.75.75 0 01.818-.162z" clip-rule="evenodd"></path></svg>
+                </button>
+            </header>
+            <div class="chat-container" id="chat-window">
+                </div>
+            <div class="smart-prompts" id="smart-prompts-container"></div>
+            <button id="scroll-to-bottom-btn" class="scroll-to-bottom-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 15.586l-4.293-4.293a1 1 0 00-1.414 1.414l5 5a1 1 0 001.414 0l5-5a1 1 0 00-1.414-1.414L12 15.586z"></path><path d="M12 8.586l-4.293-4.293a1 1 0 10-1.414 1.414l5 5a1 1 0 001.414 0l5-5a1 1 0 10-1.414-1.414L12 8.586z"></path></svg>
+            </button>
+            <div class="input-container">
+                <textarea id="message-input" placeholder="Ваше сообщение..." rows="1"></textarea>
+                <button id="send-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z"></path></svg>
+                </button>
+            </div>
+        </main>
+    </div>
+    <div class="page-overlay" id="page-overlay"></div>
+    <script src="script.js"></script>
+</body>
+</html>
