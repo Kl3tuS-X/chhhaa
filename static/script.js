@@ -1,5 +1,12 @@
 // Файл: my_chatgpt_bot/static/script.js
-// ВЕРСИЯ "НАЗАД В БУДУЩЕЕ 5.0" - КЛАССИКА С НОВЫМИ ФИШКАМИ
+// ВЕРСИЯ "РАЗДЕЛЯЙ И ВЛАСТВУЙ" - ПОЛНАЯ ВЕРСИЯ ДЛЯ GITHUB PAGES
+
+// --- НАСТРОЙКА API ---
+// !!! ВАЖНО: Замени 'wrzoo' на свой ник на PythonAnywhere.
+// Эта строчка — единственное, что связывает твой красивый интерфейс
+// с его "мозгом" на другом сервере.
+const API_BASE_URL = 'https://wrzoo.pythonanywhere.com';
+// --- КОНЕЦ НАСТРОЙКИ ---
 
 const tg = window.Telegram.WebApp;
 tg.ready();
@@ -20,7 +27,6 @@ const modalCloseBtn = document.getElementById('modal-close-btn');
 const smartPromptsContainer = document.getElementById('smart-prompts-container');
 const scrollToBottomBtn = document.getElementById('scroll-to-bottom-btn');
 const themeSwitcher = document.getElementById('theme-switcher');
-const emptyChatPlaceholder = document.querySelector('.empty-chat-placeholder');
 
 // --- Состояние и Константы ---
 let currentChatId = null;
@@ -39,9 +45,20 @@ function getModelDisplayName(modelId) {
     if (modelId && modelId.includes('flash')) return 'Gemini 2.5 Flash';
     return 'Gemini';
 }
+
+// Главное изменение для раздельной архитектуры
 async function apiCall(endpoint, body) {
-    const response = await fetch(endpoint, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
-    if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+    // Добавляем базовый URL к каждому запросу
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body)
+    });
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error("API call failed with status:", response.status, "and message:", errorText);
+        throw new Error(`HTTP Error: ${response.status}`);
+    }
     return response.json();
 }
 
@@ -83,18 +100,17 @@ function renderSmartPrompts() {
     });
 }
 
-// ВОЗВРАЩАЕМ НАШУ ФУНКЦИЮ ДЛЯ АНИМАЦИИ НАБОРА ТЕКСТА
 function typeMessage(element, text) {
     const words = text.split(' ');
     let wordIndex = 0;
     element.textContent = '';
-    
+
     function addWord() {
         if (wordIndex < words.length) {
             element.textContent += (wordIndex > 0 ? ' ' : '') + words[wordIndex];
             wordIndex++;
             chatWindow.scrollTop = chatWindow.scrollHeight;
-            setTimeout(addWord, 70); // Скорость появления слов
+            setTimeout(addWord, 70);
         }
     }
     addWord();
@@ -103,11 +119,11 @@ function typeMessage(element, text) {
 function addMessageToUI(text, type, shouldAnimate = false) {
     const wrapper = document.createElement('div');
     wrapper.className = `message-wrapper ${type === 'user' ? 'user-message-wrapper' : 'bot-message-wrapper'}`;
-    if (type === 'user' || shouldAnimate) wrapper.classList.add('float-in');
+    wrapper.classList.add('float-in');
 
     const msgEl = document.createElement('div');
     msgEl.className = `message ${type === 'user' ? 'user-message' : 'bot-message'}`;
-    
+
     const copyBtn = document.createElement('button');
     copyBtn.className = 'copy-btn';
     copyBtn.title = 'Копировать';
@@ -117,7 +133,6 @@ function addMessageToUI(text, type, shouldAnimate = false) {
     wrapper.appendChild(copyBtn);
     chatWindow.appendChild(wrapper);
 
-    // Включаем анимацию для ответа бота
     if (type === 'bot' && shouldAnimate) {
         typeMessage(msgEl, text);
     } else {
@@ -126,24 +141,15 @@ function addMessageToUI(text, type, shouldAnimate = false) {
     chatWindow.scrollTop = chatWindow.scrollHeight;
 }
 
-
 function showTypingIndicator() {
     const wrapper = document.createElement('div');
     wrapper.className = 'message-wrapper avatar-indicator-wrapper';
     const avatarSVG = `<div class="avatar-svg-container"><svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#DBEAFE" stroke="#BFDBFE" stroke-width="2"/><g class="avatar-body"><path d="M36 38C36 31.3726 30.6274 26 24 26C17.3726 26 12 31.3726 12 38" stroke-width="2" stroke-linecap="round"/><g class="avatar-eyes"><circle cx="20" cy="22" r="1.5"/><circle cx="28" cy="22" r="1.5"/></g><g class="avatar-brain"><path d="M24 10C21.7909 10 20 11.7909 20 14C20 16.2091 21.7909 18 24 18C26.2091 18 28 16.2091 28 14C28 11.7909 26.2091 10 24 10Z"/></g></g></svg></div>`;
     wrapper.innerHTML = avatarSVG;
-    const path = wrapper.querySelector('.avatar-body path');
-    const eyes = wrapper.querySelectorAll('.avatar-eyes circle');
-    const brain = wrapper.querySelector('.avatar-brain path');
-    if (path) path.style.stroke = 'var(--accent-color)';
-    if (eyes) eyes.forEach(e => e.style.fill = 'var(--accent-color)');
-    if (brain) brain.style.fill = 'var(--accent-color)';
-    
     chatWindow.appendChild(wrapper);
     chatWindow.scrollTop = chatWindow.scrollHeight;
     return wrapper;
 }
-
 
 function renderChatList(chats) {
     const chatIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 17H14M7 12H17M7 7H17M4 21V5C4 3.89543 4.89543 3 6 3H18C19.1046 3 20 3.89543 20 5V17C20 18.1046 19.1046 19 18 19H7.23607C6.49525 19 5.81152 19.4477 5.52786 20.1464L4 21Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -175,17 +181,11 @@ async function loadChatHistory(chatId) {
     try {
         const data = await apiCall('/api/get_chat_history', { chat_id: chatId });
         loadingIndicator.remove();
-        if (data.history.length > 0) {
-            data.history.forEach(msg => addMessageToUI(msg.parts[0].text, msg.role === 'user' ? 'user' : 'bot', false));
-        } else {
-            managePlaceholder(false);
-            chatWindow.innerHTML = '';
-        }
+        data.history.forEach(msg => addMessageToUI(msg.parts[0].text, msg.role === 'model' ? 'bot' : 'user'));
     } catch (error) {
         loadingIndicator.remove();
         addMessageToUI('Не удалось загрузить историю.', 'bot', true);
     }
-    await loadUserChats(true);
 }
 
 async function loadUserChats(keepCurrent = false) {
@@ -195,7 +195,7 @@ async function loadUserChats(keepCurrent = false) {
         renderChatList(data.chats);
         if (!keepCurrent && data.chats.length > 0) {
             await loadChatHistory(data.chats[0].chat_id);
-        } else if (data.chats.length === 0 && !currentChatId) {
+        } else if (data.chats.length === 0) {
             startNewChatMode();
         }
     } catch(error) {
@@ -212,13 +212,12 @@ function startNewChatMode() {
     renderEmptyState();
 }
 
-// ОБНОВЛЕННАЯ ФУНКЦИЯ ОТПРАВКИ СООБЩЕНИЯ
 async function handleSendMessage() {
     const text = messageInput.value.trim();
     if (text === '' || sendButton.disabled) return;
 
     managePlaceholder(false);
-    addMessageToUI(text, 'user', true);
+    addMessageToUI(text, 'user');
     messageInput.value = '';
     messageInput.style.height = 'auto';
     sendButton.disabled = true;
@@ -227,38 +226,26 @@ async function handleSendMessage() {
 
     try {
         const payload = { chat_id: currentChatId, user_id: userId, text: text, model_version: currentChatId === null ? newChatModel : undefined };
-        
-        // Используем нашу стандартную функцию apiCall
         const data = await apiCall('/api/chat', payload);
-        
+
         loadingIndicator.remove();
-        
-        // Передаем ответ в UI для анимации
         addMessageToUI(data.response, 'bot', true);
-        
+
         if (currentChatId === null) {
             currentChatId = data.chat_id;
         }
-        
-        // Обновляем список чатов, чтобы увидеть новый заголовок
         await loadUserChats(true);
-
     } catch (error) {
         loadingIndicator.remove();
         addMessageToUI('Извини, что-то пошло не так на моей стороне.', 'bot', true);
-        console.error("Request failed:", error);
     } finally {
         sendButton.disabled = false;
         messageInput.focus();
     }
 }
 
-
 async function handleDeleteChat(chatId) {
     if (!confirm(`Вы уверены, что хотите удалить этот чат? Это действие необратимо.`)) return;
-    const chatItem = document.querySelector(`.chat-item[data-chat-id="${chatId}"]`);
-    if (chatItem) chatItem.classList.add('deleting');
-
     try {
         const data = await apiCall('/api/delete_chat', { chat_id: chatId, user_id: userId });
         if (data.success) {
@@ -268,42 +255,33 @@ async function handleDeleteChat(chatId) {
             renderChatList(data.updated_chats);
         } else {
             alert('Не удалось удалить чат.');
-            chatItem?.classList.remove('deleting');
         }
     } catch (error) {
         alert('Произошла ошибка при удалении чата.');
-        chatItem?.classList.remove('deleting');
     }
 }
-
 
 // --- Функции темы ---
 function applyTheme(theme) {
-    if (theme === 'dark') {
-        body.classList.add('dark-theme');
-    } else {
-        body.classList.remove('dark-theme');
-    }
+    document.body.className = theme === 'dark' ? 'dark-theme' : '';
 }
 
 function handleThemeSwitch() {
-    const currentTheme = localStorage.getItem('theme') || 'light';
-    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    const newTheme = document.body.classList.contains('dark-theme') ? 'light' : 'dark';
     localStorage.setItem('theme', newTheme);
     applyTheme(newTheme);
 }
 
 // --- Инициализация ---
 async function init() {
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    applyTheme(savedTheme);
+    applyTheme(localStorage.getItem('theme') || 'light');
 
     try {
-        if (tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) {
-            userId = tg.initDataUnsafe.user.id;
-        } else {
+        if (!tg.initDataUnsafe || !tg.initDataUnsafe.user) {
             console.warn("Telegram user data not found. Using mock user ID 123 for testing.");
             userId = 123;
+        } else {
+            userId = tg.initDataUnsafe.user.id;
         }
         await loadUserChats();
     } catch(error) {
@@ -313,48 +291,57 @@ async function init() {
     }
 }
 
-function showModelModal() { modelSelectionModal.style.display = 'flex'; setTimeout(() => modelSelectionModal.classList.add('visible'), 10); }
-function hideModelModal() { modelSelectionModal.classList.remove('visible'); setTimeout(() => modelSelectionModal.style.display = 'none', 300); }
-
-// --- ОБРАБОТЧИКИ СОБЫТИЙ ---
+// --- Обработчики событий ---
 menuButton.addEventListener('click', toggleSidebar);
 pageOverlay.addEventListener('click', closeSidebar);
 sendButton.addEventListener('click', handleSendMessage);
 messageInput.addEventListener('keypress', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } });
-newChatButton.addEventListener('click', showModelModal);
-modalCloseBtn.addEventListener('click', hideModelModal);
-modelSelectionModal.addEventListener('click', e => { if (e.target === modelSelectionModal) hideModelModal(); });
+newChatButton.addEventListener('click', () => { modelSelectionModal.classList.add('visible'); });
+modalCloseBtn.addEventListener('click', () => { modelSelectionModal.classList.remove('visible'); });
 themeSwitcher.addEventListener('click', handleThemeSwitch);
 
-messageInput.addEventListener('input', () => { messageInput.style.height = 'auto'; messageInput.style.height = `${messageInput.scrollHeight}px`; });
-
-chatWindow.addEventListener('scroll', () => { const isScrolledUp = chatWindow.scrollHeight - chatWindow.scrollTop > chatWindow.clientHeight + 100; scrollToBottomBtn.classList.toggle('visible', isScrolledUp); });
-scrollToBottomBtn.addEventListener('click', () => { chatWindow.scrollTo({ top: chatWindow.scrollHeight, behavior: 'smooth' }); });
+chatWindow.addEventListener('scroll', () => {
+    scrollToBottomBtn.classList.toggle('visible', chatWindow.scrollHeight - chatWindow.scrollTop > chatWindow.clientHeight + 150);
+});
+scrollToBottomBtn.addEventListener('click', () => {
+    chatWindow.scrollTo({ top: chatWindow.scrollHeight, behavior: 'smooth' });
+});
 
 chatWindow.addEventListener('click', e => {
     const copyBtn = e.target.closest('.copy-btn');
     if (copyBtn) {
         const content = copyBtn.closest('.message-wrapper').querySelector('.message').textContent;
-        navigator.clipboard.writeText(content).then(() => { copyBtn.innerHTML = ICONS.CHECK; setTimeout(() => { copyBtn.innerHTML = ICONS.COPY; }, 1500); });
+        navigator.clipboard.writeText(content).then(() => {
+            copyBtn.innerHTML = ICONS.CHECK;
+            setTimeout(() => { copyBtn.innerHTML = ICONS.COPY; }, 1500);
+        });
     }
 });
 
 modelCards.forEach(card => {
-    card.addEventListener('click', () => { newChatModel = card.dataset.model; hideModelModal(); startNewChatMode(); });
+    card.addEventListener('click', () => {
+        newChatModel = card.dataset.model;
+        modelSelectionModal.classList.remove('visible');
+        startNewChatMode();
+    });
 });
+
 chatList.addEventListener('click', e => {
-    const deleteBtn = e.target.closest('.delete-btn');
-    const chatItem = e.target.closest('.chat-item');
-    if (deleteBtn && chatItem) {
-        e.stopPropagation();
-        handleDeleteChat(parseInt(chatItem.dataset.chatId));
-    } else if (chatItem) {
-        const chatId = parseInt(chatItem.dataset.chatId);
-        if (chatId !== currentChatId) {
-            closeSidebar();
-            loadChatHistory(chatId);
-        }
+    const target = e.target.closest('.chat-item');
+    if (!target) return;
+
+    if (e.target.closest('.delete-btn')) {
+        handleDeleteChat(parseInt(target.dataset.chatId));
+    } else if (parseInt(target.dataset.chatId) !== currentChatId) {
+        loadChatHistory(parseInt(target.dataset.chatId));
+        closeSidebar();
     }
 });
 
+messageInput.addEventListener('input', () => {
+    messageInput.style.height = 'auto';
+    messageInput.style.height = (messageInput.scrollHeight) + 'px';
+});
+
+// Запускаем все!
 init();
